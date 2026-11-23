@@ -244,6 +244,14 @@
   window.LUstate = stateText;
   window.addEventListener('resize', () => render());
   document.addEventListener('keydown', e => { if (e.key === 'Escape') { anchor = null; mode = 'deduce'; say(null); render(); } });
+  // Remember whether each help section was left open or closed.
+  const UIKEY = 'lightup-proof:sections';
+  let sections = {};
+  try { sections = JSON.parse(localStorage.getItem(UIKEY)) || {}; } catch (e) { /* keep defaults */ }
+  for (const d of document.querySelectorAll('details[id]')) {
+    if (d.id in sections) d.open = sections[d.id];
+    d.addEventListener('toggle', () => { sections[d.id] = d.open; try { localStorage.setItem(UIKEY, JSON.stringify(sections)); } catch (e) { /* not saved */ } });
+  }
   const pick = $('pick');
   PUZZLES.forEach((p, i) => { const o = el('option', null, p.title); o.value = i; pick.appendChild(o); });
   pick.onchange = () => load(pick.selectedIndex);
