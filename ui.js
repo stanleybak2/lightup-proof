@@ -195,10 +195,15 @@
     }
   }
 
+  // The proof column ends at the bottom of the window, wherever its top currently is.
+  function fitProof() {
+    const col = document.querySelector('.right');
+    col.style.maxHeight = innerWidth <= 520 ? '' : Math.max(220, innerHeight - col.getBoundingClientRect().top - 12) + 'px';
+  }
   function render() {
     const path = proof.path(), f = proof.facts(path);
     if (anchor && !LU.anchorOk(P, anchor, f)) anchor = null;
-    renderBoard(f); renderHint(f); renderProof(path);
+    renderBoard(f); renderHint(f); fitProof(); renderProof(path);
     for (const m of ['deduce', 'suppose', 'split']) $('m-' + m).classList.toggle('on', mode === m);
     $('v-bulb').classList.toggle('on', mark === 1); $('v-empty').classList.toggle('on', mark === 0);
     $('undo').disabled = !proof.hist.length;
@@ -252,6 +257,7 @@
   };
   window.LUstate = stateText;
   window.addEventListener('resize', () => render());
+  window.addEventListener('scroll', fitProof, { passive: true });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') { anchor = null; mode = 'deduce'; say(null); render(); } });
   // Remember whether each help section was left open or closed.
   const UIKEY = 'lightup-proof:sections';
