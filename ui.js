@@ -26,6 +26,8 @@
     launch(); requestAnimationFrame(tick);
   }
 
+  const BULB = '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="glass" d="M12 2.2a6.8 6.8 0 0 0-4 12.3c.7.5 1.1 1.3 1.1 2.1v.6h5.8v-.6c0-.8.4-1.6 1.1-2.1a6.8 6.8 0 0 0-4-12.3z"/>'
+    + '<path class="shine" d="M8.6 8.4a3.6 3.6 0 0 1 2.3-2.6"/><rect class="base" x="9.1" y="18.1" width="5.8" height="1.9" rx=".9"/><rect class="base" x="10.2" y="20.7" width="3.6" height="1.6" rx=".8"/></svg>';
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const valWord = (v, n) => v === 1 ? (n > 1 ? 'are bulbs' : 'is a bulb') : (n > 1 ? 'are empty' : 'is empty');
   const names = cells => cells.map(P.cn).join(', ');
@@ -103,7 +105,7 @@
           const v = f.get(id);
           if (lit.has(id)) d.classList.add('lit');
           if (v) {
-            if (v.val === 1) d.appendChild(el('span', 'bulb')); else if (!v.auto) d.appendChild(el('span', 'x', '×'));
+            if (v.val === 1) { const s = el('span', 'bulb'); s.innerHTML = BULB; d.appendChild(s); } else if (!v.auto) d.appendChild(el('span', 'x', '×'));
             if (v.depth > 0) d.classList.add('hyp');
             if (v.assumed) d.classList.add('assumed');
           }
@@ -198,6 +200,7 @@
     const m = $('msg'); m.textContent = msg ? msg.text : ''; m.className = msg ? msg.kind : '';
     const solvedNow = proof.solved();
     $('solved').style.display = solvedNow ? 'block' : 'none';
+    $('next').style.display = $('pick').selectedIndex < PUZZLES.length - 1 ? '' : 'none';
     if (solvedNow && !wasSolved) celebrate();
     wasSolved = solvedNow;
     store();
@@ -220,6 +223,7 @@
     render();
   };
   $('restart').onclick = () => load($('pick').selectedIndex, true);
+  $('next').onclick = () => { const p = $('pick'); if (p.selectedIndex < PUZZLES.length - 1) { p.selectedIndex++; load(p.selectedIndex); window.scrollTo(0, 0); } };
   // Everything needed to reproduce the current situation, as text that can be pasted to someone else.
   function stateText() {
     const f = proof.facts(), rows = [];
