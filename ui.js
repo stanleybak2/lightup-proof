@@ -7,21 +7,33 @@
   // Fireworks on a canvas over the page, for a few seconds after a puzzle is solved.
   function celebrate() {
     if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const cv = $('fx'), ctx = cv.getContext('2d'), dpr = window.devicePixelRatio || 1;
+    // Capped resolution: a full-density canvas made each frame too slow on high-density screens.
+    const cv = $('fx'), ctx = cv.getContext('2d'), dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const stats = window.LUI.fx = { start: performance.now(), frames: 0, firstBurst: null, end: null };
     const W = cv.width = innerWidth * dpr, H = cv.height = innerHeight * dpr;
     const colors = ['#f2a900', '#ff5a5f', '#4cc9f0', '#7ae582', '#c77dff', '#ffffff'];
     let parts = [], rockets = [], launched = 0, last = performance.now();
     const launch = () => rockets.push({ x: W * (0.15 + 0.7 * Math.random()), y: H, vy: -H * (0.55 + 0.25 * Math.random()), top: H * (0.15 + 0.3 * Math.random()), c: colors[launched++ % colors.length] });
-    const burst = r => { for (let i = 0; i < 70; i++) { const a = Math.random() * 6.283, s = (60 + Math.random() * 240) * dpr; parts.push({ x: r.x, y: r.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, c: Math.random() < 0.2 ? '#ffffff' : r.c }); } };
+    const ROCKETS = 22, big = Math.min(W, H) / dpr / 700 + 0.6;   // bursts scale with the window
+    const burst = r => {
+      const n = 170, second = colors[(colors.indexOf(r.c) + 2) % colors.length];
+      if (stats.firstBurst === null) stats.firstBurst = Math.round(performance.now() - stats.start);
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * 6.283, ring = i % 3 === 0, s = (ring ? 430 : 90 + Math.random() * 380) * dpr * big;
+        parts.push({ x: r.x, y: r.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, size: ring ? 3.4 : 2.6, c: Math.random() < 0.15 ? '#ffffff' : ring ? second : r.c });
+      }
+    };
     const tick = now => {
-      const dt = Math.min(0.05, (now - last) / 1000); last = now;
-      if (launched < 9 && Math.random() < dt * 3.5) launch();
-      ctx.clearRect(0, 0, W, H);
-      rockets = rockets.filter(r => { r.y += r.vy * dt; ctx.fillStyle = r.c; ctx.fillRect(r.x - dpr, r.y, 2 * dpr, 10 * dpr); if (r.y <= r.top) { burst(r); return false; } return true; });
-      parts = parts.filter(p => { p.vy += 220 * dpr * dt; p.vx *= 0.985; p.vy *= 0.985; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 0.7;
-        if (p.life <= 0) return false; ctx.globalAlpha = p.life; ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, 2.2 * dpr, 0, 6.283); ctx.fill(); return true; });
+      const dt = Math.min(0.1, (now - last) / 1000); last = now; stats.frames++;
+      if (launched < ROCKETS && Math.random() < dt * 5) launch();
+      // Fade the previous frame instead of clearing it, so sparks leave trails.
+      ctx.globalCompositeOperation = 'destination-out'; ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'source-over';
+      rockets = rockets.filter(r => { r.y += r.vy * dt; ctx.fillStyle = r.c; ctx.fillRect(r.x - 1.5 * dpr, r.y, 3 * dpr, 16 * dpr); if (r.y <= r.top) { burst(r); return false; } return true; });
+      parts = parts.filter(p => { p.vy += 220 * dpr * dt; p.vx *= 0.985; p.vy *= 0.985; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 0.5;
+        if (p.life <= 0) return false; ctx.globalAlpha = p.life; ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * dpr, 0, 6.283); ctx.fill(); return true; });
       ctx.globalAlpha = 1;
-      if (launched < 9 || rockets.length || parts.length) requestAnimationFrame(tick); else ctx.clearRect(0, 0, W, H);
+      if (launched < ROCKETS || rockets.length || parts.length) requestAnimationFrame(tick); else { ctx.clearRect(0, 0, W, H); stats.end = Math.round(performance.now() - stats.start); }
     };
     launch(); requestAnimationFrame(tick);
   }

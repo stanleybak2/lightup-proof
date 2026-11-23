@@ -40,7 +40,8 @@
   button:disabled { opacity: .45; cursor: default; }
   button.on { background: var(--anchor); color: var(--bg); border-color: var(--anchor); }
   .tools { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 10px; align-items: center; }
-  .group { display: flex; gap: 4px; align-items: center; }
+  .group { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .group > span, .tools button { white-space: nowrap; }
   .group > span { color: var(--muted); font-size: 13px; margin-right: 2px; }
   #board { display: grid; gap: 0; user-select: none; width: max-content; max-width: 100%; }
   .lab { color: var(--muted); font-size: 12px; display: flex; align-items: center; justify-content: center; }
@@ -93,7 +94,12 @@
   #win { display: none; position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .35); align-items: center; justify-content: center; padding: 16px; }
   #win.show { display: flex; }
   #win .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px 24px; width: min(360px, 100%); text-align: center; }
-  #win h2 { font-size: 22px; margin: 0 0 6px; color: var(--ok); }
+  #win h2 { font-size: 40px; line-height: 1.1; margin: 0 0 8px; color: var(--ok); font-weight: 800; }
+  @media (prefers-reduced-motion: no-preference) {
+    #win.show .card { animation: pop .45s cubic-bezier(.2, 1.6, .4, 1); }
+    #win.show h2 { animation: pop .6s cubic-bezier(.2, 1.8, .4, 1); }
+    @keyframes pop { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  }
   #win p { margin: 0 0 16px; color: var(--muted); }
   #win label { display: block; text-align: left; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
   #win select { width: 100%; padding: 8px; margin-bottom: 14px; }
@@ -141,7 +147,7 @@
     <div id="board"></div>
     <div id="hint"></div>
     <div id="msg"></div>
-    <div id="solved"><span>Solved. Every mark was forced by a rule, so this is the only solution.</span><button id="next">Choose next puzzle</button></div>
+    <div id="solved"><span>Solved! Every mark was forced by a rule, so this is the only solution.</span><button id="next">Choose next puzzle</button></div>
     <details open id="d-rules">
       <summary>Game rules</summary>
       <ul>
@@ -182,6 +188,6 @@
 </footer>
 <script src="puzzles.js?v=8"></script>
 <script src="engine.js?v=8"></script>
-<script src="ui.js?v=13"></script>
+<script src="ui.js?v=15"></script>
 </body>
 </html>
