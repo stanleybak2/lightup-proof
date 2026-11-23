@@ -13,8 +13,8 @@
     const W = cv.width = innerWidth * dpr, H = cv.height = innerHeight * dpr;
     const colors = ['#f2a900', '#ff5a5f', '#4cc9f0', '#7ae582', '#c77dff', '#ffffff'];
     let parts = [], rockets = [], launched = 0, last = performance.now();
-    const launch = () => rockets.push({ x: W * (0.15 + 0.7 * Math.random()), y: H, vy: -H * (0.55 + 0.25 * Math.random()), top: H * (0.15 + 0.3 * Math.random()), c: colors[launched++ % colors.length] });
-    const ROCKETS = 22, big = Math.min(W, H) / dpr / 700 + 0.6;   // bursts scale with the window
+    const launch = () => rockets.push({ x: W * (0.15 + 0.7 * Math.random()), y: H, vy: -H * (1.0 + 0.4 * Math.random()), top: H * (0.15 + 0.3 * Math.random()), c: colors[launched++ % colors.length] });
+    const ROCKETS = 14, big = Math.min(W, H) / dpr / 700 + 0.6;   // bursts scale with the window
     const burst = r => {
       const n = 170, second = colors[(colors.indexOf(r.c) + 2) % colors.length];
       if (stats.firstBurst === null) stats.firstBurst = Math.round(performance.now() - stats.start);
@@ -25,12 +25,12 @@
     };
     const tick = now => {
       const dt = Math.min(0.1, (now - last) / 1000); last = now; stats.frames++;
-      if (launched < ROCKETS && Math.random() < dt * 5) launch();
+      if (launched < ROCKETS && Math.random() < dt * 12) launch();
       // Fade the previous frame instead of clearing it, so sparks leave trails.
       ctx.globalCompositeOperation = 'destination-out'; ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(0, 0, W, H);
       ctx.globalCompositeOperation = 'source-over';
       rockets = rockets.filter(r => { r.y += r.vy * dt; ctx.fillStyle = r.c; ctx.fillRect(r.x - 1.5 * dpr, r.y, 3 * dpr, 16 * dpr); if (r.y <= r.top) { burst(r); return false; } return true; });
-      parts = parts.filter(p => { p.vy += 220 * dpr * dt; p.vx *= 0.985; p.vy *= 0.985; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 0.5;
+      parts = parts.filter(p => { p.vy += 220 * dpr * dt; p.vx *= 0.985; p.vy *= 0.985; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 0.8;
         if (p.life <= 0) return false; ctx.globalAlpha = p.life; ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * dpr, 0, 6.283); ctx.fill(); return true; });
       ctx.globalAlpha = 1;
       if (launched < ROCKETS || rockets.length || parts.length) requestAnimationFrame(tick); else { ctx.clearRect(0, 0, W, H); stats.end = Math.round(performance.now() - stats.start); }
