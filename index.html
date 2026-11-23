@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Light Up proofs</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --panel: #ffffff; --ink: #22221f; --muted: #6b6a64; --line: #d6d4cb;
+    --wall: #2b2b29; --wall-ink: #ffffff; --cell: #ffffff; --lit: #fff3b0; --bulb: #f2a900;
+    --scope: #2f7dd1; --anchor: #0c447c; --hyp: #7f57d6; --ok: #1f7a4d; --err: #b3261e; --btn: #eceae3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --panel: #262624; --ink: #ecebe5; --muted: #a09f97; --line: #45443f;
+      --wall: #0d0d0c; --wall-ink: #ecebe5; --cell: #3a3a37; --lit: #6b5c1c; --bulb: #ffc533;
+      --scope: #6fb0f2; --anchor: #b5d4f4; --hyp: #b39cf0; --ok: #6fd3a0; --err: #ff8a80; --btn: #34342f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, sans-serif; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  main { display: flex; flex-wrap: wrap; gap: 20px; padding: 16px; align-items: flex-start; }
+  .left { flex: 0 0 auto; max-width: 100%; }
+  .right { flex: 1 1 340px; min-width: 300px; }
+  select, button { font: inherit; color: inherit; }
+  select { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+  button { padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--btn); cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--muted); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.on { background: var(--anchor); color: var(--bg); border-color: var(--anchor); }
+  .tools { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 10px; align-items: center; }
+  .group { display: flex; gap: 4px; align-items: center; }
+  .group > span { color: var(--muted); font-size: 13px; margin-right: 2px; }
+  #board { display: grid; gap: 0; user-select: none; width: max-content; max-width: 100%; }
+  .lab { color: var(--muted); font-size: 12px; display: flex; align-items: center; justify-content: center; }
+  .cell { position: relative; width: var(--sz); height: var(--sz); border: 1px solid var(--line); background: var(--cell);
+          display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .cell.wall { background: var(--wall); color: var(--wall-ink); font-weight: 600; font-size: calc(var(--sz) * .45); cursor: default; }
+  .cell.wall.num { cursor: pointer; }
+  .cell.lit { background: var(--lit); }
+  .cell .bulb { width: 56%; height: 56%; border-radius: 50%; background: var(--bulb); border: 2px solid var(--ink); }
+  .cell .x { font-size: calc(var(--sz) * .5); line-height: 1; color: var(--muted); }
+  .cell.hyp .bulb { border-color: var(--hyp); border-style: dashed; }
+  .cell.hyp .x { color: var(--hyp); }
+  .cell.assumed { box-shadow: inset 0 0 0 3px var(--hyp); }
+  .cell.scope::after { content: ""; position: absolute; inset: 2px; border: 2px dashed var(--scope); border-radius: 3px; pointer-events: none; }
+  .cell.anchor { outline: 3px solid var(--anchor); outline-offset: -3px; z-index: 1; }
+  .cell.hl { outline: 3px solid var(--ok); outline-offset: -3px; z-index: 2; }
+  #hint { margin-top: 12px; padding: 10px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; max-width: 520px; }
+  #hint .rule { margin-bottom: 6px; }
+  #hint .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  #msg { margin-top: 8px; min-height: 1.4em; max-width: 520px; }
+  #msg.err { color: var(--err); } #msg.ok { color: var(--ok); }
+  #solved { display: none; margin-top: 10px; padding: 10px 12px; border: 2px solid var(--ok); border-radius: 8px; color: var(--ok); font-weight: 600; max-width: 520px; }
+  h2 { font-size: 15px; margin: 0 0 8px; font-weight: 600; }
+  #proof { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-height: 120px; overflow-x: auto; }
+  .ln { display: flex; gap: 8px; padding: 2px 4px; border-radius: 4px; }
+  .ln:hover { background: var(--btn); }
+  .ln .n { color: var(--muted); min-width: 1.8em; text-align: right; flex: none; }
+  .ln .why { color: var(--muted); margin-left: auto; padding-left: 12px; text-align: right; }
+  .box { border-left: 3px solid var(--hyp); margin: 6px 0 6px 8px; padding: 2px 0 2px 8px; border-radius: 2px; cursor: pointer; }
+  .box.active { background: color-mix(in srgb, var(--hyp) 10%, transparent); }
+  .box.dead { border-left-color: var(--err); opacity: .8; }
+  .box > .head { font-weight: 600; color: var(--hyp); padding: 2px 4px; }
+  .box.dead > .head { color: var(--err); }
+  .bot { color: var(--err); padding: 2px 4px; font-weight: 600; }
+  .caseshead { color: var(--muted); padding: 4px 4px 0; font-style: italic; }
+  .branches { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; }
+  .branches > .box { flex: 1 1 200px; margin-left: 8px; }
+  .empty { color: var(--muted); padding: 2px 4px; }
+  details { margin-top: 14px; color: var(--muted); max-width: 640px; }
+  details summary { cursor: pointer; color: var(--ink); }
+  details li { margin: 4px 0; }
+  kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; font: inherit; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Light Up proofs</h1>
+  <label>Puzzle <select id="pick"></select></label>
+  <button id="restart">Restart</button>
+</header>
+<main>
+  <section class="left">
+    <div class="tools">
+      <div class="group"><span>Click does</span>
+        <button id="m-deduce" class="on" title="Cite a clue, then mark the cells it forces">Deduce</button>
+        <button id="m-suppose" title="Assume a value for a cell, to look for a contradiction">Suppose…</button>
+        <button id="m-split" title="Split into two cases: the cell is a bulb, or it is empty">Split cell…</button>
+      </div>
+      <div class="group"><span>Mark as</span>
+        <button id="v-bulb" class="on">Bulb</button>
+        <button id="v-empty">Empty ×</button>
+      </div>
+    </div>
+    <div id="board"></div>
+    <div id="hint"></div>
+    <div id="msg"></div>
+    <div id="solved">Solved. Every mark was forced by a rule, so this is the only solution.</div>
+  </section>
+  <section class="right">
+    <div class="tools">
+      <h2 style="margin:0 auto 0 0">Proof</h2>
+      <button id="undo">Undo</button>
+      <button id="endcases">End cases</button>
+      <button id="discard">Discard assumption</button>
+    </div>
+    <div id="proof"></div>
+    <details>
+      <summary>How this works</summary>
+      <ul>
+        <li>The game has three rules. A numbered wall has exactly that many bulbs next to it. Every white cell must be lit. No bulb may shine on another bulb.</li>
+        <li>You never pick a rule from a menu. Click the clue that is your reason: a number, a bulb, or a white cell (meaning "this cell must be lit"). The cells that rule talks about get a dashed outline.</li>
+        <li>Then mark a cell. Left-click uses the "Mark as" setting; right-click always marks empty. The step is accepted only if that one rule forces it. <kbd>Esc</kbd> drops the cited clue.</li>
+        <li><b>Suppose</b> opens an assumption. Inside it everything is hypothetical (purple). If a rule becomes impossible, click that clue and press "This rule is broken": the assumption closes and its opposite is proved.</li>
+        <li><b>Split cell</b> or "Cases from this rule" opens side-by-side cases. Click a case to work in it. A case can die by contradiction. "End cases" keeps whatever is true in every surviving case.</li>
+      </ul>
+    </details>
+  </section>
+</main>
+<script src="puzzles.js"></script>
+<script src="engine.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
