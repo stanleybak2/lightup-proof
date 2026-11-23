@@ -81,6 +81,7 @@
   <h1>Light Up proofs</h1>
   <label>Puzzle <select id="pick"></select></label>
   <button id="restart">Restart</button>
+  <button id="copystate" title="Copy the puzzle, board and proof as text, for reporting a problem">Copy state</button>
 </header>
 <main>
   <section class="left">
@@ -112,7 +113,8 @@
       <summary>How this works</summary>
       <ul>
         <li>The game has three rules. A numbered wall has exactly that many bulbs next to it. Every white cell must be lit. No bulb may shine on another bulb.</li>
-        <li>You never pick a rule from a menu. Click the clue that is your reason: a number, a bulb, or a white cell (meaning "this cell must be lit"). The cells that rule talks about get a dashed outline.</li>
+        <li>The third rule is applied for you: a cell a bulb shines on (yellow) can never hold a bulb, so it counts as empty without a step.</li>
+        <li>You never pick a rule from a menu. Click the clue that is your reason: a number, or a white cell (meaning "this cell must be lit"). The cells that rule talks about get a dashed outline.</li>
         <li>Then mark a cell. Left-click uses the "Mark as" setting; right-click always marks empty. The step is accepted only if that one rule forces it. <kbd>Esc</kbd> drops the cited clue.</li>
         <li><b>Suppose</b> opens an assumption. Inside it everything is hypothetical (purple). If a rule becomes impossible, click that clue and press "This rule is broken": the assumption closes and its opposite is proved.</li>
         <li><b>Split cell</b> or "Cases from this rule" opens side-by-side cases. Click a case to work in it. A case can die by contradiction. "End cases" keeps whatever is true in every surviving case.</li>
@@ -120,8 +122,8 @@
     </details>
   </section>
 </main>
-<script src="puzzles.js"></script>
-<script src="engine.js"></script>
-<script src="ui.js"></script>
+<script src="puzzles.js?v=2"></script>
+<script src="engine.js?v=2"></script>
+<script src="ui.js?v=2"></script>
 </body>
 </html>

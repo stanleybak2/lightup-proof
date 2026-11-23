@@ -7,7 +7,8 @@ It is an experiment in a different design for [LEGUP](https://github.com/Bram-Hu
 ## The idea
 
 - **Only the base rules are axioms.** A numbered wall has exactly that many bulbs next to it; every white cell must be lit; no bulb may shine on another bulb. There is no catalogue of named derived rules.
-- **You cite a rule by clicking its clue**: a number, a bulb, or a white cell ("this cell must be lit"). Then you mark a cell, and the step is accepted only if that one rule forces it.
+- **You cite a rule by clicking its clue**: a number, or a white cell ("this cell must be lit"). Then you mark a cell, and the step is accepted only if that one rule forces it.
+- **The third rule is automatic.** A cell a bulb shines on counts as empty without a step, since spelling that out each time was the most tedious part.
 - **The proof is a list with nested boxes**, not a tree of board states:
   - *Suppose* opens an assumption. If a rule becomes impossible, cite it as broken; the box closes and the opposite is proved.
   - *Cases* opens side-by-side boxes, from a cell (bulb or empty) or from a rule (one case per cell that could be the bulb it needs). Ending the cases keeps what is true in every surviving case.

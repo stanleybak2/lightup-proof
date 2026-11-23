@@ -72,6 +72,20 @@
     check('random steps: every accepted step matches the solution', wrong === 0, tried + ' tried, ' + accepted + ' accepted, ' + wrong + ' wrong');
   }
 
+  // Lit cells count as empty without a step, and cannot be marked.
+  {
+    const P = LU.parse(PUZZLES[0]), pr = new LU.Proof(P), sol = solutions[PUZZLES[0].id];
+    direct(P, pr);
+    const f = pr.facts(), bulbs = [...f].filter(([, v]) => v.val === 1).map(([c]) => c);
+    const seen = new Set(); bulbs.forEach(b => P.vis[b].forEach(x => seen.add(x)));
+    check('every cell a bulb shines on is empty', [...seen].every(x => f.get(x).val === 0));
+    check('no proof step was needed for a bulb rule', pr.root.items.every(it => it.anchor.t !== 'B'));
+    const pr2 = new LU.Proof(P), n = P.nums.find(x => P.numAt(x) === P.nbrs[x].length && P.numAt(x) > 0);
+    pr2.tryStep({ t: 'N', cell: n }, P.nbrs[n][0], 1);
+    const litCell = P.vis[P.nbrs[n][0]][0], r = pr2.tryStep({ t: 'L', cell: litCell }, litCell, 1);
+    check('a lit cell cannot be marked', !r.ok && /already lit/.test(r.msg), r.msg);
+  }
+
   // Assumptions and cases on a puzzle that needs them.
   {
     const def = PUZZLES.find(p => p.level === 'suppose'), P = LU.parse(def), sol = solutions[def.id];
@@ -148,7 +162,7 @@
         const r = pr.endCases();
         if (!common.length) { check('end cases refused when the cases share nothing', !r.ok); pr.discard(); continue; }
         const f = pr.facts();
-        check('two live cases export exactly their common facts', r.ok && r.n === common.length && !f.has(c) && common.every(([cell, v]) => f.get(cell).val === v.val && sol.get(cell).val === v.val), 'common ' + common.length);
+        check('two live cases export exactly their common facts', r.ok && f.size === pf.size + common.length && !f.has(c) && common.every(([cell, v]) => f.get(cell).val === v.val && sol.get(cell).val === v.val), 'common ' + common.length);
         ok = true; break;
       }
       check('two-live-branch split exercised', ok);

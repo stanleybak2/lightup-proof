@@ -33,6 +33,7 @@
   //   N: numbered wall  -> exactly k bulbs among its neighbours
   //   L: white cell     -> at least one bulb among the cells that light it
   //   B: bulb           -> at most one bulb in its row segment / column segment
+  //      (facts() applies this one automatically, so the interface never needs to cite it)
   function constraints(P, a) {
     if (a.t === 'N') { const k = P.numAt(a.cell); return [{ S: P.nbrs[a.cell], lo: k, hi: k }]; }
     if (a.t === 'L') return [{ S: [a.cell, ...P.vis[a.cell]], lo: 1, hi: INF }];
@@ -86,7 +87,7 @@
       }
       return p;
     }
-    // Everything known at the end of the given path: cell -> {val, depth, assumed}.
+    // Everything known at the end of the given path: cell -> {val, depth, assumed, auto}.
     facts(path) {
       path = path || this.path();
       const f = new Map();
@@ -98,6 +99,9 @@
           else if (it.type === 'cases' && it.ended) it.exports.forEach(e => f.set(e.cell, { val: e.val, depth: d }));
         }
       });
+      // A cell a bulb shines on cannot hold a bulb: it counts as empty without a step.
+      for (const [c, v] of [...f]) if (v.val === 1)
+        for (const x of this.P.vis[c]) if (!f.has(x)) f.set(x, { val: 0, depth: v.depth, auto: true });
       return f;
     }
     lit(f) {
@@ -133,7 +137,7 @@
       if (!blk) return fail('This case is already closed by a contradiction. Click another case, or end the cases.');
       const f = this.facts(path);
       if (!P.isWhite(cell)) return fail('Only white cells can be marked.');
-      if (f.has(cell)) return fail(P.cn(cell) + ' is already decided.');
+      if (f.has(cell)) return fail(f.get(cell).auto ? P.cn(cell) + ' is already lit by a bulb, so it is empty and needs no step.' : P.cn(cell) + ' is already decided.');
       if (!anchorOk(P, a, f)) return fail('That clue cannot be cited here.');
       let inScope = false, ok = false;
       for (const con of constraints(P, a)) {
@@ -277,7 +281,10 @@
       if (!common.size) return fail('No cell has the same value in every open case yet. Keep deducing inside the cases.');
       this.snap();
       item.ended = true;
-      item.exports = [...common].sort((x, y) => x[0] - y[0]).map(([cell, val]) => ({ cell, val }));
+      // Cells lit by an exported bulb become empty on their own, so they need not be listed.
+      const litByExport = new Set();
+      for (const [c, v] of common) if (v === 1) P.vis[c].forEach(x => litByExport.add(x));
+      item.exports = [...common].filter(([c, v]) => v === 1 || !litByExport.has(c)).sort((x, y) => x[0] - y[0]).map(([cell, val]) => ({ cell, val }));
       return { ok: true, n: item.exports.length, survivors: live.length };
     }
     // Throw away the innermost open assumption or case split.

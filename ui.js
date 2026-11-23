@@ -9,9 +9,22 @@
   const names = cells => cells.map(P.cn).join(', ');
   const say = (text, kind) => { msg = text ? { text, kind: kind || 'err' } : null; };
 
-  function load(i) {
+  // Progress is kept in this browser's localStorage, one saved proof per puzzle, so a reload resumes it.
+  const KEY = 'lightup-proof:v1';
+  const readSaved = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
+  function store() {
+    try {
+      const all = readSaved(); all.last = P.id; all.p = all.p || {};
+      if (proof.root.items.length || proof.hist.length) all.p[P.id] = { root: proof.root, hist: proof.hist.slice(-300) };
+      else delete all.p[P.id];
+      localStorage.setItem(KEY, JSON.stringify(all));
+    } catch (e) { /* storage unavailable: play on without saving */ }
+  }
+  function load(i, fresh) {
     P = LU.parse(PUZZLES[i]); proof = new LU.Proof(P);
-    anchor = null; mode = 'deduce'; msg = null;
+    const saved = (readSaved().p || {})[P.id];
+    if (saved && !fresh) { proof.root = saved.root; proof.hist = saved.hist || []; }
+    anchor = null; mode = 'deduce'; msg = saved && !fresh ? { text: 'Picked up where you left off. Restart clears this puzzle.', kind: 'ok' } : null;
     window.LUI = { P, proof };   // handy for poking at state from the console
     render();
   }
@@ -35,8 +48,10 @@
       anchor = { t: 'N', cell: id };
     } else if (!P.isWhite(id)) {
       anchor = null; say('A wall without a number has no rule to cite.');
+    } else if (f.has(id) && f.get(id).val === 1) {
+      anchor = null; say('A bulb already rules out every cell it shines on, so there is nothing to cite here.', 'ok');
     } else {
-      anchor = { t: f.has(id) && f.get(id).val === 1 ? 'B' : 'L', cell: id };
+      anchor = { t: 'L', cell: id };
     }
     render();
   }
@@ -63,7 +78,7 @@
           const v = f.get(id);
           if (lit.has(id)) d.classList.add('lit');
           if (v) {
-            d.appendChild(v.val === 1 ? el('span', 'bulb') : el('span', 'x', '×'));
+            if (v.val === 1) d.appendChild(el('span', 'bulb')); else if (!v.auto) d.appendChild(el('span', 'x', '×'));
             if (v.depth > 0) d.classList.add('hyp');
             if (v.assumed) d.classList.add('assumed');
           }
@@ -82,7 +97,7 @@
     if (blk.closed) { h.appendChild(el('div', 'rule', 'This case is closed by a contradiction. Click another case in the proof, or press "End cases".')); return; }
     if (mode === 'suppose') { h.appendChild(el('div', 'rule', 'Click an undecided cell to assume it is a bulb. Right-click to assume it is empty.')); return; }
     if (mode === 'split') { h.appendChild(el('div', 'rule', 'Click an undecided cell to split into two cases: it is a bulb, or it is empty.')); return; }
-    if (!anchor) { h.appendChild(el('div', 'rule', 'Click a clue to cite it as your reason: a number, a bulb, or any white cell (it must be lit).')); return; }
+    if (!anchor) { h.appendChild(el('div', 'rule', 'Click a clue to cite it as your reason: a number, or any white cell (it must be lit).')); return; }
     let text;
     if (anchor.t === 'N') text = 'Rule: exactly ' + P.numAt(anchor.cell) + ' of the outlined cells ' + (P.numAt(anchor.cell) === 1 ? 'is a bulb.' : 'are bulbs.');
     else if (anchor.t === 'L') text = 'Rule: ' + P.cn(anchor.cell) + ' must be lit, so at least one outlined cell is a bulb.';
@@ -91,7 +106,6 @@
     h.appendChild(el('div', null, 'Now mark an outlined cell that this rule forces.'));
     const acts = el('div', 'acts');
     const btn = (label, fn) => { const x = el('button', null, label); x.onclick = fn; acts.appendChild(x); };
-    if (anchor.t === 'B') btn('Mark every cell it sees as empty', act(() => proof.stepAll(anchor), 'Marked.'));
     btn('Cases from this rule', act(() => proof.casesAnchor(anchor), () => { anchor = null; say('Cases opened, one per cell that could be the bulb. Click a case to work in it.', 'ok'); }));
     btn('This rule is broken', act(() => proof.contradiction(anchor), () => { anchor = null; say('Contradiction accepted.', 'ok'); }));
     h.appendChild(acts);
@@ -158,6 +172,7 @@
     $('discard').textContent = item && item.type === 'cases' ? 'Discard cases' : 'Discard assumption';
     const m = $('msg'); m.textContent = msg ? msg.text : ''; m.className = msg ? msg.kind : '';
     $('solved').style.display = proof.solved() ? 'block' : 'none';
+    store();
   }
 
   // ---------- wiring ----------
@@ -176,10 +191,30 @@
     else say(r.msg);
     render();
   };
-  $('restart').onclick = () => load($('pick').selectedIndex);
+  $('restart').onclick = () => load($('pick').selectedIndex, true);
+  // Everything needed to reproduce the current situation, as text that can be pasted to someone else.
+  function stateText() {
+    const f = proof.facts(), rows = [];
+    for (let r = 0; r < P.h; r++) {
+      let s = '';
+      for (let c = 0; c < P.w; c++) { const id = r * P.w + c, v = f.get(id); s += !P.isWhite(id) ? P.grid[r][c] : !v ? '.' : v.val === 1 ? 'B' : v.auto ? '~' : 'x'; }
+      rows.push(s);
+    }
+    return JSON.stringify({ puzzle: P.id, title: P.title, board: rows, legend: 'B bulb, x marked empty, ~ lit so empty, . undecided',
+      cited: anchor ? LU.anchorText(P, anchor) : null, message: msg ? msg.text : null, proof: proof.root }, null, 1);
+  }
+  $('copystate').onclick = () => {
+    const text = stateText();
+    const done = () => { say('State copied. Paste it into a message to report a problem.', 'ok'); render(); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => window.prompt('Copy this:', text));
+    else window.prompt('Copy this:', text);
+  };
+  window.LUstate = stateText;
   document.addEventListener('keydown', e => { if (e.key === 'Escape') { anchor = null; mode = 'deduce'; say(null); render(); } });
   const pick = $('pick');
   PUZZLES.forEach((p, i) => { const o = el('option', null, p.title); o.value = i; pick.appendChild(o); });
   pick.onchange = () => load(pick.selectedIndex);
-  load(0);
+  const lastIdx = Math.max(0, PUZZLES.findIndex(p => p.id === readSaved().last));
+  pick.selectedIndex = lastIdx;
+  load(lastIdx);
 })();
