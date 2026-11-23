@@ -2,7 +2,29 @@
 (function () {
   'use strict';
   const $ = id => document.getElementById(id);
-  let P, proof, anchor = null, mode = 'deduce', mark = 1, msg = null;
+  let P, proof, anchor = null, mode = 'deduce', mark = 1, msg = null, wasSolved = false;
+
+  // Fireworks on a canvas over the page, for a few seconds after a puzzle is solved.
+  function celebrate() {
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const cv = $('fx'), ctx = cv.getContext('2d'), dpr = window.devicePixelRatio || 1;
+    const W = cv.width = innerWidth * dpr, H = cv.height = innerHeight * dpr;
+    const colors = ['#f2a900', '#ff5a5f', '#4cc9f0', '#7ae582', '#c77dff', '#ffffff'];
+    let parts = [], rockets = [], launched = 0, last = performance.now();
+    const launch = () => rockets.push({ x: W * (0.15 + 0.7 * Math.random()), y: H, vy: -H * (0.55 + 0.25 * Math.random()), top: H * (0.15 + 0.3 * Math.random()), c: colors[launched++ % colors.length] });
+    const burst = r => { for (let i = 0; i < 70; i++) { const a = Math.random() * 6.283, s = (60 + Math.random() * 240) * dpr; parts.push({ x: r.x, y: r.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, c: Math.random() < 0.2 ? '#ffffff' : r.c }); } };
+    const tick = now => {
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      if (launched < 9 && Math.random() < dt * 3.5) launch();
+      ctx.clearRect(0, 0, W, H);
+      rockets = rockets.filter(r => { r.y += r.vy * dt; ctx.fillStyle = r.c; ctx.fillRect(r.x - dpr, r.y, 2 * dpr, 10 * dpr); if (r.y <= r.top) { burst(r); return false; } return true; });
+      parts = parts.filter(p => { p.vy += 220 * dpr * dt; p.vx *= 0.985; p.vy *= 0.985; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 0.7;
+        if (p.life <= 0) return false; ctx.globalAlpha = p.life; ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, 2.2 * dpr, 0, 6.283); ctx.fill(); return true; });
+      ctx.globalAlpha = 1;
+      if (launched < 9 || rockets.length || parts.length) requestAnimationFrame(tick); else ctx.clearRect(0, 0, W, H);
+    };
+    launch(); requestAnimationFrame(tick);
+  }
 
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const valWord = (v, n) => v === 1 ? (n > 1 ? 'are bulbs' : 'is a bulb') : (n > 1 ? 'are empty' : 'is empty');
@@ -26,6 +48,7 @@
     if (saved && !fresh) { proof.root = saved.root; proof.hist = saved.hist || []; }
     anchor = null; mode = 'deduce'; msg = saved && !fresh ? { text: 'Picked up where you left off. Restart clears this puzzle.', kind: 'ok' } : null;
     window.LUI = { P, proof };   // handy for poking at state from the console
+    wasSolved = proof.solved();  // no fireworks for a puzzle that was already solved when it was opened
     render();
   }
 
@@ -59,7 +82,9 @@
 
   // ---------- board ----------
   function renderBoard(f) {
-    const b = $('board'), sz = Math.max(30, Math.min(54, Math.floor(480 / P.w)));
+    // Leave about half the width for the proof, which sits to the right of the board.
+    const room = innerWidth <= 520 ? innerWidth - 60 : innerWidth * 0.5 - 50;
+    const b = $('board'), sz = Math.max(20, Math.min(54, Math.floor(Math.min(480, room) / P.w)));
     b.style.setProperty('--sz', sz + 'px');
     b.style.gridTemplateColumns = '22px repeat(' + P.w + ', ' + sz + 'px)';
     b.textContent = '';
@@ -171,7 +196,10 @@
     const item = path.length > 1 ? path[path.length - 2].items.slice(-1)[0] : null;
     $('discard').textContent = item && item.type === 'cases' ? 'Discard cases' : 'Discard assumption';
     const m = $('msg'); m.textContent = msg ? msg.text : ''; m.className = msg ? msg.kind : '';
-    $('solved').style.display = proof.solved() ? 'block' : 'none';
+    const solvedNow = proof.solved();
+    $('solved').style.display = solvedNow ? 'block' : 'none';
+    if (solvedNow && !wasSolved) celebrate();
+    wasSolved = solvedNow;
     store();
   }
 
@@ -210,6 +238,7 @@
     else window.prompt('Copy this:', text);
   };
   window.LUstate = stateText;
+  window.addEventListener('resize', () => render());
   document.addEventListener('keydown', e => { if (e.key === 'Escape') { anchor = null; mode = 'deduce'; say(null); render(); } });
   const pick = $('pick');
   PUZZLES.forEach((p, i) => { const o = el('option', null, p.title); o.value = i; pick.appendChild(o); });
