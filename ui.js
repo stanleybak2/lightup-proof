@@ -122,7 +122,7 @@
     const h = $('hint'); h.textContent = '';
     const blk = proof.path().slice(-1)[0];
     if (blk.closed) { h.appendChild(el('div', 'rule', 'This case is closed by a contradiction. Click another case in the proof, or press "End cases".')); return; }
-    if (mode === 'suppose') { h.appendChild(el('div', 'rule', 'Click an undecided cell to assume it is a bulb. Right-click to assume it is empty.')); return; }
+    if (mode === 'suppose') { h.appendChild(el('div', 'rule', 'Click an undecided cell to assume it ' + valWord(mark, 1) + '. Right-click to assume it ' + valWord(1 - mark, 1) + '.')); return; }
     if (mode === 'split') { h.appendChild(el('div', 'rule', 'Click an undecided cell to split into two cases: it is a bulb, or it is empty.')); return; }
     if (!anchor) { h.appendChild(el('div', 'rule', 'Click a clue to cite it as your reason: a number, or any white cell (it must be lit).')); return; }
     let text;
@@ -167,7 +167,7 @@
           into.appendChild(line(names(it.cells) + ' ' + valWord(it.val, it.cells.length), LU.anchorText(P, it.anchor), it.cells));
         } else if (it.type === 'suppose') {
           const a = it.block.assume;
-          into.appendChild(box(it.block, 'Suppose ' + P.cn(a.cell) + ' ' + valWord(a.val, 1)));
+          into.appendChild(box(it.block, 'Assume ' + P.cn(a.cell) + ' ' + valWord(a.val, 1)));
           if (it.block.closed) into.appendChild(line(P.cn(a.cell) + ' ' + valWord(1 - a.val, 1), 'the assumption led to a contradiction', [a.cell]));
         } else {
           const src = it.src.anchor ? LU.anchorText(P, it.src.anchor) + ', so one of these is a bulb' : P.cn(it.src.cell) + ' is a bulb or it is empty';
@@ -206,6 +206,8 @@
     renderBoard(f); renderHint(f); fitProof(); renderProof(path);
     for (const m of ['deduce', 'suppose', 'split']) $('m-' + m).classList.toggle('on', mode === m);
     $('v-bulb').classList.toggle('on', mark === 1); $('v-empty').classList.toggle('on', mark === 0);
+    $('v-bulb').textContent = 'Bulb (' + (mark === 1 ? 'left' : 'right') + ' click)';
+    $('v-empty').textContent = 'Empty (' + (mark === 0 ? 'left' : 'right') + ' click)';
     $('undo').disabled = !proof.hist.length;
     $('endcases').disabled = !proof.inCases();
     $('discard').disabled = path.length < 2;
@@ -222,7 +224,7 @@
   // ---------- wiring ----------
   const cellOf = e => { const d = e.target.closest('.cell'); return d ? +d.dataset.id : null; };
   $('board').addEventListener('click', e => { const id = cellOf(e); if (id !== null) onCell(id, mark); });
-  $('board').addEventListener('contextmenu', e => { const id = cellOf(e); if (id !== null) { e.preventDefault(); onCell(id, 0); } });
+  $('board').addEventListener('contextmenu', e => { const id = cellOf(e); if (id !== null) { e.preventDefault(); onCell(id, 1 - mark); } });
   for (const m of ['deduce', 'suppose', 'split']) $('m-' + m).onclick = () => { mode = mode === m ? 'deduce' : m; anchor = null; say(null); render(); };
   $('v-bulb').onclick = () => { mark = 1; render(); };
   $('v-empty').onclick = () => { mark = 0; render(); };
