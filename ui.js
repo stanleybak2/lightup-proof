@@ -184,6 +184,15 @@
     }
     block(proof.root, root);
     if (!proof.root.items.length) root.appendChild(el('div', 'empty', 'No steps yet. Click a clue on the board to start.'));
+    // Keep the place where the next step will go in view: the active box, or else the end of the proof.
+    const box0 = root.querySelector('.box.active');
+    if (!box0) root.scrollTop = root.scrollHeight;
+    else {
+      const pr = root.getBoundingClientRect();
+      root.scrollTop = root.scrollHeight;
+      const r2 = box0.getBoundingClientRect();
+      if (r2.bottom < pr.top + 40 || r2.bottom > pr.bottom) root.scrollTop += r2.bottom - pr.bottom + 10;
+    }
   }
 
   function render() {

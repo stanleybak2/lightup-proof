@@ -23,8 +23,15 @@
   h1 { font-size: 18px; margin: 0; font-weight: 600; }
   main { display: grid; grid-template-columns: min-content minmax(0, 1fr); gap: 20px; padding: 16px; align-items: start; }
   .left { width: min-content; }
-  .right { min-width: 0; }
-  @media (max-width: 520px) { main { grid-template-columns: minmax(0, 1fr); } }
+  /* The proof column is as tall as the window and the proof scrolls inside it. */
+  .right { min-width: 0; position: sticky; top: 12px; max-height: calc(100vh - 24px); display: flex; flex-direction: column; }
+  .right > * { flex: none; }
+  .right > #proof { flex: 1 1 auto; min-height: 120px; overflow: auto; }
+  @media (max-width: 520px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .right { position: static; max-height: none; }
+    .right > #proof { max-height: 60vh; }
+  }
   #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
   select, button { font: inherit; color: inherit; }
   select { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
@@ -62,7 +69,7 @@
   #msg.err { color: var(--err); } #msg.ok { color: var(--ok); }
   #solved { display: none; margin-top: 10px; padding: 10px 12px; border: 2px solid var(--ok); border-radius: 8px; color: var(--ok); font-weight: 600; }
   h2 { font-size: 15px; margin: 0 0 8px; font-weight: 600; }
-  #proof { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-height: 120px; overflow-x: auto; }
+  #proof { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
   .ln { display: flex; gap: 8px; padding: 2px 4px; border-radius: 4px; }
   .ln:hover { background: var(--btn); }
   .ln .n { color: var(--muted); min-width: 1.8em; text-align: right; flex: none; }
@@ -113,15 +120,6 @@
     <div id="hint"></div>
     <div id="msg"></div>
     <div id="solved"><span>Solved. Every mark was forced by a rule, so this is the only solution.</span><button id="next">Next puzzle</button></div>
-  </section>
-  <section class="right">
-    <div class="tools">
-      <h2 style="margin:0 auto 0 0">Proof</h2>
-      <button id="undo">Undo</button>
-      <button id="endcases">End cases</button>
-      <button id="discard">Discard assumption</button>
-    </div>
-    <div id="proof"></div>
     <details open id="d-rules">
       <summary>Game rules</summary>
       <ul>
@@ -145,14 +143,23 @@
       </ul>
     </details>
   </section>
+  <section class="right">
+    <div class="tools">
+      <h2 style="margin:0 auto 0 0">Proof</h2>
+      <button id="undo">Undo</button>
+      <button id="endcases">End cases</button>
+      <button id="discard">Discard assumption</button>
+    </div>
+    <div id="proof"></div>
+  </section>
 </main>
 <footer>
   Puzzles are from the <a href="https://github.com/Bram-Hub/LEGUP">LEGUP</a> sample files. Code and puzzles are released under the
   <a href="https://github.com/stanleybak2/lightup-proof/blob/main/LICENSE">GNU GPL-3.0</a>.
   <a href="https://github.com/stanleybak2/lightup-proof">Source on GitHub</a>.
 </footer>
-<script src="puzzles.js?v=7"></script>
-<script src="engine.js?v=7"></script>
-<script src="ui.js?v=7"></script>
+<script src="puzzles.js?v=8"></script>
+<script src="engine.js?v=8"></script>
+<script src="ui.js?v=9"></script>
 </body>
 </html>
