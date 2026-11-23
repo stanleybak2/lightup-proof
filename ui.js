@@ -214,8 +214,7 @@
     const m = $('msg'); m.textContent = msg ? msg.text : ''; m.className = msg ? msg.kind : '';
     const solvedNow = proof.solved();
     $('solved').style.display = solvedNow ? 'block' : 'none';
-    $('next').style.display = $('pick').selectedIndex < PUZZLES.length - 1 ? '' : 'none';
-    if (solvedNow && !wasSolved) celebrate();
+    if (solvedNow && !wasSolved) { celebrate(); openWin(); }
     wasSolved = solvedNow;
     store();
   }
@@ -237,7 +236,18 @@
     render();
   };
   $('restart').onclick = () => load($('pick').selectedIndex, true);
-  $('next').onclick = () => { const p = $('pick'); if (p.selectedIndex < PUZZLES.length - 1) { p.selectedIndex++; load(p.selectedIndex); window.scrollTo(0, 0); } };
+  // The popup shown after a win: pick the next puzzle and start it.
+  function openWin() {
+    const cur = $('pick').selectedIndex;
+    $('win-pick').selectedIndex = cur < PUZZLES.length - 1 ? cur + 1 : 0;
+    $('win').classList.add('show');
+    $('win-start').focus();
+  }
+  const closeWin = () => $('win').classList.remove('show');
+  $('next').onclick = openWin;
+  $('win-close').onclick = closeWin;
+  $('win').addEventListener('click', e => { if (e.target === $('win')) closeWin(); });
+  $('win-start').onclick = () => { const i = $('win-pick').selectedIndex; closeWin(); $('pick').selectedIndex = i; load(i); window.scrollTo(0, 0); };
   // Everything needed to reproduce the current situation, as text that can be pasted to someone else.
   function stateText() {
     const f = proof.facts(), rows = [];
@@ -258,7 +268,7 @@
   window.LUstate = stateText;
   window.addEventListener('resize', () => render());
   window.addEventListener('scroll', fitProof, { passive: true });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { anchor = null; mode = 'deduce'; say(null); render(); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('win').classList.contains('show')) { closeWin(); return; } if (e.key === 'Escape') { anchor = null; mode = 'deduce'; say(null); render(); } });
   // Remember whether each help section was left open or closed.
   const UIKEY = 'lightup-proof:sections';
   let sections = {};
@@ -268,7 +278,7 @@
     d.addEventListener('toggle', () => { sections[d.id] = d.open; try { localStorage.setItem(UIKEY, JSON.stringify(sections)); } catch (e) { /* not saved */ } });
   }
   const pick = $('pick');
-  PUZZLES.forEach((p, i) => { const o = el('option', null, p.title); o.value = i; pick.appendChild(o); });
+  PUZZLES.forEach((p, i) => { const o = el('option', null, p.title); o.value = i; pick.appendChild(o); $('win-pick').appendChild(o.cloneNode(true)); });
   pick.onchange = () => load(pick.selectedIndex);
   const lastIdx = Math.max(0, PUZZLES.findIndex(p => p.id === readSaved().last));
   pick.selectedIndex = lastIdx;
