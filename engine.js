@@ -246,7 +246,7 @@
       if (item.type !== 'cases') return;
       const open = item.branches.findIndex(b => !b.closed);
       if (open >= 0) { item.sel = open; return; }
-      // Every case failed: that is a contradiction for the enclosing block.
+      // Every case is closed: that is a contradiction for the enclosing block.
       item.ended = true; item.exports = [];
       if (path.length > 2) { parent.closed = { byCases: true }; this._afterClose(path.slice(0, -1)); }
     }
@@ -258,7 +258,7 @@
       return null;
     }
     inCases() { return !!this._innerCases(this.path()); }
-    // Close a case split: whatever holds in every surviving case holds outside it.
+    // End a case split: whatever holds in every open case holds outside it.
     endCases() {
       const P = this.P, path = this.path(), found = this._innerCases(path);
       if (!found) return fail('There is no open case split to end.');

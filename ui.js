@@ -151,7 +151,7 @@
     };
     const brokenText = a => a.t === 'N' ? LU.anchorText(P, a) + ' can no longer have the right number of bulbs'
       : a.t === 'L' ? 'nothing can light ' + P.cn(a.cell) : LU.anchorText(P, a) + ' shines on another bulb';
-    const closedLine = b => el('div', 'bot', 'Contradiction: ' + (b.closed.byCases ? 'every case failed' : brokenText(b.closed.anchor)));
+    const closedLine = b => el('div', 'bot', 'Contradiction: ' + (b.closed.byCases ? 'every case ended in a contradiction' : brokenText(b.closed.anchor)));
     const box = (b, title) => {
       const d = el('div', 'box' + (b === active ? ' active' : '') + (b.closed ? ' dead' : ''));
       d.appendChild(el('div', 'head', title));
@@ -177,7 +177,7 @@
           into.appendChild(row);
           if (it.ended) for (const v of [1, 0]) {
             const cells = it.exports.filter(e => e.val === v).map(e => e.cell);
-            if (cells.length) into.appendChild(line(names(cells) + ' ' + valWord(v, cells.length), 'true in every surviving case', cells));
+            if (cells.length) into.appendChild(line(names(cells) + ' ' + valWord(v, cells.length), 'true in every open case', cells));
           }
         }
       }
@@ -218,7 +218,7 @@
   $('endcases').onclick = () => {
     say(null);
     const r = proof.endCases();
-    if (r.ok) say(r.survivors === 1 ? 'Only one case survived, so everything in it holds.' : (r.n === 1 ? 'Kept the 1 cell that agrees' : 'Kept the ' + r.n + ' cells that agree') + ' in every surviving case.', 'ok');
+    if (r.ok) say(r.survivors === 1 ? 'Only one case is still open, so everything in it holds.' : (r.n === 1 ? 'Kept the 1 cell that agrees' : 'Kept the ' + r.n + ' cells that agree') + ' in every open case.', 'ok');
     else say(r.msg);
     render();
   };
